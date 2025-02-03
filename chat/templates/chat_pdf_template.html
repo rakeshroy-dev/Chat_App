@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .message {
+            margin-bottom: 10px;
+        }
+        .username {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Chat History</h2>
+    </div>
+    {% for message in messages %}
+    <div class="message">
+        <span class="username">{{ message.username }}</span>: {{ message.content }}
+    </div>
+    {% endfor %}
+</body>
+</html>
