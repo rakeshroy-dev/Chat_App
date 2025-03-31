@@ -24,61 +24,68 @@
     .text-left {
         margin-bottom: 20px;
     }
-
-    #chatMessages {
-      overflow-y: scroll;
-      height: 75vh;
-    }
   </style>
 {% endblock %}
 
 {% block content %}
-  <h3>Chat Room: {{ room_name }} <a href="{% url 'home' %}" class="btn btn-secondary">Back to Home</a></h3>
-
+  <h3>Chat Room: {{ room_name }} <a href="{% url 'home' %}"  class="btn btn-sm btn-secondary" >Back to Home</a></h3>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <meta name="csrf-token" content="{{ csrf_token }}">
-  <div id="chatMessages" class="card mb-3">
-    <div class="card-body">
+
+  <div id="chatMessages" class="card mb-3" style="overflow-y: scroll;height: 75vh;">
+    <div class="card-body" style="overflow-y: auto;">
       <div class="row" id="chatBox">
-        <!-- Beginning of chat history -->
-        <div class="col-2"></div>
-        <div class="col-8 text-center">
-          <a class="badge text-secondary-emphasis bg-secondary-subtle gray-900">This is the beginning of the chat history</a>
-        </div>
-        <div class="col-2"></div>
-
-        {% for message in chat_messages %}
-          <div class="col-4 d-{% if message.sender.username == current_user %}block{% else %}none{% endif %}"></div>
-          <div class="col-8">
-            <div class="message mb-3 {% if message.sender.username == current_user %}self float-end{% endif %}">
-              <div class="message-content">
-                <small style="font-size: 13px;">{{ message.sender.username }}</small>
-                <p class="mb-1">{{ message.message }}</p>
-                {% if message.url %}
-                  <p class="mb-1">{{ message.url }}</p>
-                {% endif %}
-                {% if message.imageURL %}
-                  <img src="{{ message.imageURL }}" alt="Uploaded Image" style="max-height:50px"><br>
-                {% endif %}
-                <small style="font-size: 11px;">{{ message.timestamp|date:"d-m-Y h:i:s A" }}</small>
-              </div>
+          <!-- Beginning of chat history -->
+          <div class="col-2"></div>
+          <div class="col-8 text-center"><a class="badge text-secondary-emphasis bg-secondary-subtle gray-900">This is beginning of the chat history</a></div>
+          <div class="col-2"></div>
+          <!-- Beginning of chat messages -->
+          {% for message in chat_messages %}
+            <div class="col-4 d-{% if message.sender.username == current_user %}block{%else%}none{% endif %}"></div>
+            <div class="col-8">
+                <div class="message mb-3 {% if message.sender.username == current_user %}self float-end{% endif %}">
+                    <div class="message-content">
+                      <small style="font-size: 13px;">{{ message.sender.username }}</small>
+                      <p class="mb-1">{{ message.message }}</p>
+                      <p class="mb-1">{{ message.url }}</p>
+                        {% if message.imageURL != '' %}
+                          <img src="{{ message.imageURL}}" alt="connect" style="max-height:50px"><br>
+                        {% endif %}
+                        
+                      <small style="font-size: 11px;">{{ message.timestamp |date:"d-m-Y h:i:s A" }}</small>
+                    </div>
+                </div>
+                 
             </div>
-          </div>
-          <div class="col-4 d-{% if message.sender.username == current_user %}none{% else %}block{% endif %}"></div>
-        {% endfor %}
-
+            <div class="col-4 d-{% if message.sender.username == current_user %}none{%else%}block{% endif %}"></div>
+          {% endfor %}
       </div>
     </div>
     <div class="card-footer">
       <div class="input-group input-group-sm">
+        <!-- <input type="text" class="form-control" id="messageInput" placeholder="Type your message..." /> -->
         <textarea class="form-control" id="messageInput" rows="2" placeholder="Type your message..."></textarea>
         <div class="input-group-append">
+          
           <button type="button" id="sendButton" class="btn btn-primary">
             <i class="fa fa-paper-plane fa-fw"></i>
+{#            <span class="d-none d-sm-inline"> Send</span>#}
           </button>
-          <input type="file" id="imageInput" accept="image/*" style="display: none;" />
-          <button class="btn btn-warning text-white" type="button" onclick="document.getElementById('imageInput').click();">
-            <i class="fa fa-upload"></i>
-          </button>
+          <!-- <form id="imageUploadForm" method="POST" action="/upload_image/" enctype="multipart/form-data" style="display: none;">
+            {% csrf_token %}
+            <input type="file" id="imageInput" name="image" accept="image/*" />
+            <input type="hidden" name="receiver" id="receiver" value="{{ receiver.id }}" />
+        </form>
+        
+        <button type="button" id="imageUploadButton" class="btn btn-info">
+            <i class="fa fa-image fa-fw"></i> Upload
+        </button> -->
+        <input type="file" id="imageInput" accept="image/*" style="display: none;" />
+        <button class="btn btn-warning text-white" type="button" onclick="document.getElementById('imageInput').click();"><i class="fa fa-upload"></i> </button>
+          <!-- <button type="button" id="imageUploadButton" class="btn btn-info">
+            <i class="fa fa-image fa-fw"></i>
+            <span class="d-none d-sm-inline"> Upload</span>
+          </button> -->
           <button type="button" id="endButton" class="btn btn-danger">
             <i class="fa fa-file" aria-hidden="true"></i>
           </button>
@@ -89,108 +96,194 @@
 
   {{ request.user.username|json_script:"user_username" }}
   {{ room_name|json_script:"room-name" }}
-
   <script>
+
+
+    // Custom date format: dd/MM/yyyy hh:mm a
+            const dateFormat = (createdOn) => {
+                const d = new Date(createdOn);
+                const day = d.getDate().toString().padStart(2, "0");
+                const month = (d.getMonth() + 1).toString().padStart(2, "0");
+                const year = d.getFullYear();
+                const hours = d.getHours();
+                const minutes = d.getMinutes().toString().padStart(2, "0");
+                const amPm = hours >= 12 ? "PM" : "AM";
+                const formattedHours = hours % 12 || 12;
+                return `${day}-${month}-${year} ${formattedHours}:${minutes} ${amPm}`;
+            };
+    // Variables passed through template
     const roomName = JSON.parse(document.getElementById('room-name').textContent);
-    const userUsername = JSON.parse(document.getElementById('user_username').textContent);
+    const user_username = JSON.parse(document.getElementById('user_username').textContent);
+    
+    // Connect WebSocket
     const chatSocket = new WebSocket(`ws://${window.location.host}/ws/chat/${roomName}/`);
-    const chatBox = document.getElementById("chatBox");
-    const chatMessages = document.getElementById("chatMessages");
 
-    const dateFormat = (createdOn) => {
-      const dateFormat = (createdOn) => createdOn ? new Date(createdOn).toLocaleString() : "Date not available";
-      const d = new Date(createdOn);
-      const day = d.getDate().toString().padStart(2, "0");
-      const month = (d.getMonth() + 1).toString().padStart(2, "0");
-      const year = d.getFullYear();
-      const hours = d.getHours();
-      const minutes = d.getMinutes().toString().padStart(2, "0");
-      const amPm = hours >= 12 ? "PM" : "AM";
-      const formattedHours = hours % 12 || 12;
-      return `${day}-${month}-${year} ${formattedHours}:${minutes} ${amPm}`;
-    };
+  //   const formatDate = (timestamp) => {
+  //   const messageDate = new Date(timestamp);
+  //   const currentDate = new Date();
+    
+  //   // Check if the message date is today
+  //   if (messageDate.toDateString() === currentDate.toDateString()) {
+  //     return 'Today';
+  //   }
 
+  //   // Check if the message date is yesterday
+  //   currentDate.setDate(currentDate.getDate() - 1);
+  //   if (messageDate.toDateString() === currentDate.toDateString()) {
+  //     return 'Yesterday';
+  //   }
+    
+  //   // Otherwise, return the full date
+  //   const options = { year: 'numeric', month: 'short', day: 'numeric' };
+  //   return messageDate.toLocaleDateString([], options);
+  // };
+
+ 
     chatSocket.onmessage = function (e) {
-      const message = JSON.parse(e.data);
-      console.log("Received message:", message); // Debugging the data
-      const isSelf = message.username === userUsername;
+    const message = JSON.parse(e.data);
+    const isSelf = message.username === user_username;
 
-      const escapeHTML = (str) => str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // Escape potentially harmful content (e.g., XSS prevention)
+    const escapeHTML = (str) => str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-      const messageContent = message.image_url
+    const messageContent = message.image_url
         ? `<img src="${escapeHTML(message.image_url)}" alt="Uploaded Image" class="img-fluid rounded" />`
         : `<p class="mb-1">${escapeHTML(message.message)}</p>`;
 
-      const timestamp = dateFormat(message.timestamp);
+    const timestamp = dateFormat(message.timestamp); // Format timestamp
+        console.log(message.timestamp);
+        console.log(timestamp);
 
-      chatBox.innerHTML += `
+    // Custom date format: dd/MM/yyyy hh:mm a
+    // const dateFormat = (createdOn) => {
+    //             const d = new Date(createdOn);
+    //             const day = d.getDate().toString().padStart(2, "0");
+    //             const month = (d.getMonth() + 1).toString().padStart(2, "0");
+    //             const year = d.getFullYear();
+    //             const hours = d.getHours();
+    //             const minutes = d.getMinutes().toString().padStart(2, "0");
+    //             const amPm = hours >= 12 ? "PM" : "AM";
+    //             const formattedHours = hours % 12 || 12;
+    //             return ${day}-${month}-${year} ${formattedHours}:${minutes} ${amPm};
+
+    // Add message to chat box
+    document.getElementById("chatBox").innerHTML += `
         <div class="col-4 d-${isSelf ? 'block' : 'none'}"></div>
         <div class="col-8">
-          <div class="message mb-3 ${isSelf ? 'self float-end' : ''}">
-            <div class="message-content">
-              <small style="font-size: 13px;">${escapeHTML(message.username)}</small>
-              ${messageContent}
-              <small style="font-size: 11px;">${timestamp}</small>
+            <div class="message mb-3 ${isSelf ? 'self float-end' : ''}">
+                <div class="message-content">
+                    <small style="font-size: 13px;">${escapeHTML(message.username)}</small>
+                    ${messageContent}
+                    <small style="font-size: 11px;">${timestamp}</small>
+                </div>
             </div>
-          </div>
         </div>
         <div class="col-4 d-${isSelf ? 'none' : 'block'}"></div>
-      `;
+    `;
 
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    };
+    // Scroll to the latest message
+    const chatBox = document.getElementById("chatMessages");
+    chatBox.scrollTop = chatBox.scrollHeight;
+};
 
-    document.getElementById('sendButton').addEventListener('click', () => {
-      const messageInput = document.getElementById('messageInput');
+    // Send Message to WebSocket
+    const sendButton = document.getElementById('sendButton');
+    const messageInput = document.getElementById('messageInput');
+    sendButton.addEventListener('click', (event) => {
       const message = messageInput.value.trim();
-
-      if (message) {
-        chatSocket.send(JSON.stringify({ message: message }));
+      if (message !== '') {
+        // Send the message to the server
+        chatSocket.send(JSON.stringify({
+            'message': message,
+        }));
         messageInput.value = '';
       }
     });
 
-    document.getElementById('imageInput').addEventListener('change', (event) => {
-      const file = event.target.files[0];
+    
+const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-      if (file) {
+    document.getElementById('endButton').addEventListener('click', function () {
+        const chatMessages = [];
+        document.querySelectorAll('#chatBox .message').forEach((messageElement) => {
+            const username = messageElement.querySelector('small')?.textContent || "Unknown";
+            const content = messageElement.querySelector('p')?.textContent || "";
+            if (content.trim() !== "") {
+                chatMessages.push({
+                    username,
+                    content,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        });
+
+        // Debugging the collected messages
+        console.log('Messages to send:', chatMessages);
+
+        // Send the chat messages to the backend to generate PDF
+        fetch('/chat/generate_pdf/{{ chatroom.id }}/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,  // Include CSRF token
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ messages: chatMessages, room_name: roomName })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.blob();  // Expect the PDF file as a blob
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chat_history_${roomName}.pdf`;  // Ensure room_name is passed correctly
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        })
+        .catch(error => {
+            console.error('Error generating PDF file:', error);
+            alert('There was an error generating the PDF file. Please try again.');
+        });
+      });
+      
+      // const chatSocket = new WebSocket(`ws://${window.location.host}/ws/chat/${roomName}/`);
+
+document.getElementById('sendButton').addEventListener('click', () => {
+    const messageInput = document.getElementById('messageInput');
+    const message = messageInput.value.trim();
+    // console.log(message)
+    // console.log("hello")
+
+    if (message) {
+        chatSocket.send(JSON.stringify({
+            message: message,
+        }));
+        messageInput.value = ''; // Clear input field
+    }
+});
+
+document.getElementById('imageInput').addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    // console.log(file)
+    if (file) {
         const reader = new FileReader();
         reader.onload = function (e) {
-          chatSocket.send(JSON.stringify({ image: e.target.result }));
+            const imageBase64 = e.target.result;
+            chatSocket.send(JSON.stringify({
+                image: imageBase64,
+            }));
         };
         reader.readAsDataURL(file);
-      }
-    });
+        // reader.log()
+    }
+});
 
-    document.getElementById('endButton').addEventListener('click', () => {
-      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-      const chatMessagesData = Array.from(document.querySelectorAll('#chatBox .message')).map(messageElement => {
-        return {
-          username: messageElement.querySelector('small')?.textContent || 'Unknown',
-          content: messageElement.querySelector('p')?.textContent || '',
-          timestamp: new Date().toISOString()
-        };
-      });
 
-      fetch(`/chat/generate_pdf/{{ chatroom.id }}/`, {
-        method: 'POST',
-        headers: {
-          'X-CSRFToken': csrfToken,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ messages: chatMessagesData, room_name: roomName })
-      })
-      .then(response => response.blob())
-      .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `chat_history_${roomName}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      })
-      .catch(error => alert('Error generating PDF: ' + error.message));
-    });
-  </script>
+
+
+</script>
 {% endblock %}

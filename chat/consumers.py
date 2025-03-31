@@ -60,7 +60,7 @@ class ChatRoomConsumer(AsyncWebsocketConsumer):
                 'message': message,
                 'username': sender.username,
                 'image_url': image_url,
-                'timestamp': timestamp.isoformat(),
+                'timestamp': timestamp.isoformat()
             }
         )
 
